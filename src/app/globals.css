@@ -6,29 +6,29 @@
  * Theme is chosen by [data-theme] (set from a cookie on the server) and falls back to the OS setting.
  */
 :root {
-  --bg: #f5f6f8;
+  --bg: #f4f6f8;
   --surface: #ffffff;
-  --surface-2: #eff1f4;
-  --surface-3: #e6e9ee;
-  --line: #e2e5ea;
-  --line-strong: #cbd1da;
-  --fg: #12161f;
-  --muted: #4f5968;
-  --subtle: #5f6b7f;
-  --accent: #2557e8;
-  --accent-hover: #1c47c8;
+  --surface-2: #eef2f4;
+  --surface-3: #e3e9eb;
+  --line: #dfe6e8;
+  --line-strong: #c7d2d5;
+  --fg: #10202a;
+  --muted: #53656d;
+  --subtle: #73848a;
+  --accent: #0f766e;
+  --accent-hover: #0b5f59;
   --accent-fg: #ffffff;
-  --accent-soft: #e6edfd;
-  --accent-line: #b9ccfa;
-  --success: #146c34;
-  --success-soft: #e3f4e9;
-  --warning: #96600a;
+  --accent-soft: #dff3ef;
+  --accent-line: #a9ded6;
+  --success: #16734a;
+  --success-soft: #e2f5eb;
+  --warning: #9a6412;
   --warning-soft: #fbf0d9;
-  --danger: #c62f2f;
-  --danger-soft: #fbe6e6;
-  --overlay: rgb(10 14 24 / 0.5);
-  --shadow-pop: 0 8px 28px rgb(15 23 42 / 0.14), 0 1px 3px rgb(15 23 42 / 0.1);
-  --sidebar: #0f1626;
+  --danger: #c43d42;
+  --danger-soft: #fbe7e7;
+  --overlay: rgb(10 24 28 / 0.5);
+  --shadow-pop: 0 18px 45px rgb(16 32 42 / 0.14), 0 2px 6px rgb(16 32 42 / 0.08);
+  --sidebar: #10272b;
   --sidebar-line: #1d2740;
   --sidebar-fg: #c9d1e3;
   --sidebar-muted: #7f8bab;
@@ -152,6 +152,36 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    a, button, input, [role="button"] {
+      transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+      transition-duration: 180ms;
+      transition-timing-function: ease-out;
+    }
+  }
+
+  @keyframes cairn-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .cairn-rise {
+    animation: cairn-rise 500ms ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .app-canvas {
+    background-image: radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 30rem);
   }
 
   ::selection {

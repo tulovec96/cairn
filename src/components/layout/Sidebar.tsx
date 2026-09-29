@@ -113,7 +113,7 @@ export function Sidebar({ isAdmin, initialCollapsed, usage }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "hidden shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-sidebar-fg transition-[width] duration-150 lg:flex",
+        "hidden shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-sidebar-fg shadow-[8px_0_30px_rgb(10_24_28/0.06)] transition-[width] duration-300 lg:flex",
         collapsed ? "w-[60px]" : "w-60",
       )}
     >

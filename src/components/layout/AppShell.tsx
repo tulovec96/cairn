@@ -39,7 +39,7 @@ export async function AppShell({ actor, children }: { actor: Actor; children: Re
             <TopBar name={actor.user.displayName} email={actor.user.email} avatarUrl={account.user.avatarUrl} isAdmin={isAdmin} usage={sidebarUsage} />
           </Suspense>
           {!actor.user.emailVerifiedAt && <VerifyEmailBanner />}
-          <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
+          <main id="main" tabIndex={-1} className="app-canvas min-h-0 flex-1 overflow-y-auto outline-none">
             {children}
           </main>
         </div>
@@ -50,5 +50,5 @@ export async function AppShell({ actor, children }: { actor: Actor; children: Re
 }
 
 export function PageContainer({ children, wide }: { children: ReactNode; wide?: boolean }) {
-  return <div className={wide ? "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6" : "mx-auto w-full max-w-5xl px-4 py-6 sm:px-6"}>{children}</div>;
+  return <div className={wide ? "mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8" : "mx-auto w-full max-w-5xl px-4 py-7 sm:px-6"}>{children}</div>;
 }
