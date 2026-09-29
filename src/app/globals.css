@@ -154,6 +154,36 @@
     text-rendering: optimizeLegibility;
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    a, button, input, [role="button"] {
+      transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+      transition-duration: 180ms;
+      transition-timing-function: ease-out;
+    }
+  }
+
+  @keyframes cairn-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .cairn-rise {
+    animation: cairn-rise 500ms ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .app-canvas {
+    background-image: radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 30rem);
+  }
+
   ::selection {
     background: var(--accent-soft);
     color: var(--fg);

@@ -59,7 +59,7 @@ export function TopBar({ name, email, avatarUrl, isAdmin, usage }: Props) {
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:px-4">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-line bg-surface/90 px-3 backdrop-blur-xl sm:px-5">
       <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation menu" onClick={() => setNavOpen(true)}>
         <MenuIcon className="size-5" aria-hidden />
       </Button>

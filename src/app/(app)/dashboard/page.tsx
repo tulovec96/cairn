@@ -42,16 +42,41 @@ export default async function DashboardPage() {
   const tone = pct >= 90 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-accent";
   return (
     <PageContainer wide>
-      <PageHeader
-        title={`Hello, ${actor.user.displayName}`}
-        description="Your storage and what's been happening."
-        actions={
-          <ButtonLink href="/upload" variant="primary" icon={<UploadCloud className="size-4" aria-hidden />}>
-            Upload
-          </ButtonLink>
-        }
-      />
+      <div className="cairn-rise">
+        <PageHeader
+          title={`Hello, ${actor.user.displayName}`}
+          description="Your storage and what's been happening."
+          actions={
+            <ButtonLink href="/upload" variant="primary" icon={<UploadCloud className="size-4" aria-hidden />}>
+              Upload
+            </ButtonLink>
+          }
+        />
+      </div>
 
+      <section className="cairn-rise mb-5 overflow-hidden rounded-2xl border border-accent-line bg-accent-soft/70 shadow-[0_16px_40px_rgb(15_118_110/0.08)]" style={{ animationDelay: "70ms" }} aria-labelledby="workspace-focus">
+        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="max-w-xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent-line bg-surface/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+              <span className="size-1.5 rounded-full bg-accent" aria-hidden /> Workspace pulse
+            </div>
+            <h2 id="workspace-focus" className="text-xl font-semibold tracking-tight sm:text-2xl">Keep your library in motion.</h2>
+            <p className="mt-2 max-w-lg text-sm leading-6 text-muted">A focused home for the files you use most. Pick a next step and keep the clutter from piling up.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[280px]">
+            <Link href="/recent" className="group rounded-xl border border-accent-line bg-surface/80 p-3 hover:-translate-y-0.5 hover:bg-surface">
+              <span className="text-lg font-semibold tnum">{d.recentFiles.length}</span>
+              <span className="mt-1 block text-xs text-muted">Recent files <ArrowUpRight className="ml-1 inline size-3 transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
+            </Link>
+            <Link href="/favorites" className="group rounded-xl border border-accent-line bg-surface/80 p-3 hover:-translate-y-0.5 hover:bg-surface">
+              <span className="text-lg font-semibold tnum">{d.activeShares}</span>
+              <span className="mt-1 block text-xs text-muted">Shared links <ArrowUpRight className="ml-1 inline size-3 transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="cairn-rise" style={{ animationDelay: "120ms" }}>
       <Card className="mb-4">
         <div className="p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -82,6 +107,7 @@ export default async function DashboardPage() {
           <p className="mt-2 text-xs text-subtle">Maximum file size {formatBytes(d.usage.maxFileBytes, 0)}. Trashed files count until they are permanently removed.</p>
         </div>
       </Card>
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat icon={<FileText />} label="Files" value={d.fileCount.toLocaleString("en-US")} href="/files" />

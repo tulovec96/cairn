@@ -39,7 +39,7 @@ export async function AppShell({ actor, children }: { actor: Actor; children: Re
             <TopBar name={actor.user.displayName} email={actor.user.email} avatarUrl={account.user.avatarUrl} isAdmin={isAdmin} usage={sidebarUsage} />
           </Suspense>
           {!actor.user.emailVerifiedAt && <VerifyEmailBanner />}
-          <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
+          <main id="main" tabIndex={-1} className="app-canvas min-h-0 flex-1 overflow-y-auto outline-none">
             {children}
           </main>
         </div>
