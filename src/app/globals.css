@@ -248,9 +248,47 @@
 }
 .mk-display {
   font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   font-weight: 500;
 }
+
+.mk-spotlight {
+  background: radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--accent-soft) 80%, transparent), transparent 26rem), var(--bg);
+}
+
+.mk-product-window {
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--fg) 12%, transparent), 0 2px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset;
+  transform: perspective(1100px) rotateY(-2deg) rotateX(1deg);
+  transition: transform 400ms ease, box-shadow 400ms ease;
+}
+
+.mk-product-window:hover {
+  transform: perspective(1100px) rotateY(0deg) rotateX(0deg) translateY(-4px);
+  box-shadow: 0 30px 80px color-mix(in srgb, var(--fg) 16%, transparent), 0 2px 0 color-mix(in srgb, var(--surface) 70%, transparent) inset;
+}
+
+.mk-feature-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  padding: 1.5rem;
+  transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+
+.mk-feature-card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 14px 35px color-mix(in srgb, var(--fg) 8%, transparent);
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-product-window, .mk-feature-card { transition: none; transform: none; }
+}
+
 .mk-rule {
   background-image: linear-gradient(to right, var(--line-strong) 50%, transparent 0);
   background-size: 6px 1px;

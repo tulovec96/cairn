@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, FileArchive, FileImage, FileText, FolderOpen, LockKeyhole, Play, ShieldCheck, Sparkles, UploadCloud, Users } from "lucide-react";
 import { CairnStack } from "@/components/marketing/CairnStack";
 import { Section } from "@/components/marketing/MarketingShell";
 import { ButtonLink } from "@/components/ui/Button";
@@ -70,6 +70,33 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="mk-spotlight border-b border-line">
+        <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:py-24">
+          <div className="cairn-rise">
+            <p className="font-mono text-xs tracking-widest text-accent uppercase">A calmer control center</p>
+            <h2 className="mk-display mt-3 text-4xl leading-[1.03] sm:text-5xl">Your files, with a point of view.</h2>
+            <p className="mt-5 max-w-lg text-[16px] leading-7 text-muted">Cairn turns the mess between upload and handoff into a clear, searchable trail. Everything important is visible, reversible, and yours.</p>
+            <div className="mt-7 flex flex-wrap gap-3 text-[13px] text-muted">
+              <span className="inline-flex items-center gap-2"><CheckCircle2 className="size-4 text-accent" aria-hidden /> Resumable by default</span>
+              <span className="inline-flex items-center gap-2"><CheckCircle2 className="size-4 text-accent" aria-hidden /> Share with guardrails</span>
+            </div>
+          </div>
+          <div className="mk-product-window cairn-rise" style={{ animationDelay: "100ms" }}>
+            <div className="flex items-center gap-2 border-b border-line px-4 py-3"><span className="size-2 rounded-full bg-danger/70" /><span className="size-2 rounded-full bg-warning/70" /><span className="size-2 rounded-full bg-success/70" /><span className="ml-auto rounded-full bg-accent-soft px-2 py-1 font-mono text-[10px] text-accent">LIVE LIBRARY</span></div>
+            <div className="grid gap-4 p-4 sm:grid-cols-[0.8fr_1.2fr] sm:p-6">
+              <div className="rounded-xl bg-surface-2 p-4"><p className="font-mono text-[10px] tracking-widest text-subtle uppercase">Workspace</p><p className="mt-4 text-sm font-semibold">Northstar / 2026</p><div className="mt-5 flex flex-col gap-2 text-xs text-muted"><span className="rounded-lg bg-accent-soft px-3 py-2 text-accent">All files</span><span className="px-3 py-2">Shared with me</span><span className="px-3 py-2">Recent</span></div></div>
+              <div><div className="flex items-center justify-between"><p className="text-sm font-semibold">Recent files</p><span className="text-xs text-subtle">Updated just now</span></div><div className="mt-4 flex flex-col gap-2">{[["Brand direction.pdf", "2.4 MB", FileText], ["Launch assets", "Folder", FolderOpen], ["Product tour.mp4", "84.1 MB", FileImage]].map(([name, meta, Icon]) => { const ItemIcon = Icon as typeof FileText; return <div key={name as string} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3 transition-transform hover:-translate-y-0.5"><div className="flex size-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><ItemIcon className="size-4" aria-hidden /></div><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{name as string}</p><p className="mt-0.5 text-[11px] text-subtle">{meta as string}</p></div><ArrowRight className="size-3.5 text-subtle" aria-hidden /></div> })}</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-line bg-surface-2/40">
+        <div className="mx-auto grid w-full max-w-6xl gap-3 px-4 py-5 sm:grid-cols-3 sm:px-6">
+          {[{ icon: ShieldCheck, title: "Verified on the way in", body: "Checksums and scanning" }, { icon: LockKeyhole, title: "Private until you decide", body: "Revocable, expiring links" }, { icon: Users, title: "Ready for real teams", body: "Roles, requests, history" }].map(({ icon: Icon, title, body }) => <div key={title} className="flex items-center gap-3 rounded-xl border border-line bg-surface/70 px-4 py-3"><Icon className="size-5 shrink-0 text-accent" aria-hidden /><div><p className="text-xs font-semibold">{title}</p><p className="mt-0.5 text-[11px] text-muted">{body}</p></div></div>)}
+        </div>
+      </section>
+
       <Section eyebrow="The route" title="From your disk to someone else's, without guesswork" lead="Four steps, each visible in the product. You can see where any file is at any moment.">
         <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
@@ -97,6 +124,15 @@ export default async function HomePage() {
             Every feature, in detail →
           </Link>
         </p>
+      </Section>
+
+      <Section eyebrow="Designed for momentum" title="Small details that make a big difference" lead="The features you notice after the first week are the ones that make you stay.">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="mk-feature-card md:col-span-2"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Sparkles className="size-5" aria-hidden /></div><h3 className="mk-display mt-6 text-2xl">Search that feels like memory.</h3><p className="mt-2 max-w-lg text-sm leading-6 text-muted">Use plain language or operators. Save a search once and let it become a living view of your library.</p><div className="mt-6 flex flex-wrap gap-2 font-mono text-[11px] text-accent"><span className="rounded-full border border-accent-line bg-accent-soft px-3 py-1">type:image</span><span className="rounded-full border border-accent-line bg-accent-soft px-3 py-1">size:&gt;50MB</span><span className="rounded-full border border-accent-line bg-accent-soft px-3 py-1">tag:launch</span></div></div>
+          <div className="mk-feature-card"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><UploadCloud className="size-5" aria-hidden /></div><h3 className="mk-display mt-6 text-2xl">Drop a whole folder.</h3><p className="mt-2 text-sm leading-6 text-muted">Resumable uploads keep moving even when your connection does not.</p><div className="mt-7 h-2 overflow-hidden rounded-full bg-surface-3"><div className="h-full w-3/4 rounded-full bg-accent" /></div><p className="mt-2 text-right font-mono text-[11px] text-subtle">3 of 4 files ready</p></div>
+          <div className="mk-feature-card"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Play className="size-5" aria-hidden /></div><h3 className="mk-display mt-6 text-2xl">Preview without detours.</h3><p className="mt-2 text-sm leading-6 text-muted">Open media, documents, code and data in place. Keep your context while you decide.</p></div>
+          <div className="mk-feature-card md:col-span-2"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><FileArchive className="size-5" aria-hidden /></div><div><h3 className="mk-display text-2xl">A complete paper trail.</h3><p className="mt-1 text-sm text-muted">Versions, comments, activity and signed webhooks make handoffs easy to trust.</p></div></div><div className="mt-6 grid grid-cols-3 gap-2 text-center text-[11px] text-muted"><div className="rounded-lg border border-line bg-surface p-3"><b className="block text-lg text-fg">24</b>versions</div><div className="rounded-lg border border-line bg-surface p-3"><b className="block text-lg text-fg">100%</b>traceable</div><div className="rounded-lg border border-line bg-surface p-3"><b className="block text-lg text-fg">0</b>guesswork</div></div></div>
+        </div>
       </Section>
 
       <Section eyebrow="Two ways in" title="Accounts for people who store. Links and requests for people who don't.">
