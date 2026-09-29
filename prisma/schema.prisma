@@ -1,0 +1,1057 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// All primary keys are random, application-generated identifiers (see src/server/ids.ts).
+// Nothing in the public surface is sequential.
+//
+// "Workspace" = either a person (files with orgId = null, owned by ownerId) or an organization
+// (files with orgId set). Access to org content is decided by OrganizationMember roles.
+
+// ------------------------------------------------------------------------------------------------
+// Accounts & security
+// ------------------------------------------------------------------------------------------------
+
+model User {
+  id               String    @id
+  email            String    @unique
+  username         String?   @unique
+  displayName      String
+  passwordHash     String
+  role             String    @default("user") // user | admin
+  status           String    @default("active") // active | suspended
+  suspendedReason  String?
+  quotaBytes       BigInt? // per-user override of the plan's storage
+  maxFileBytes     BigInt? // per-user override of the plan's max file size
+  planKey          String    @default("free") // denormalized current plan (see Subscription)
+  avatarKey        String?
+  bio              String    @default("")
+  timezone         String    @default("UTC")
+  language         String    @default("en")
+  theme            String    @default("system")
+  prefs            String    @default("{}") // JSON: default view, notification preferences, ...
+  privacy          String    @default("{}") // JSON: profile visibility
+  emailVerifiedAt  DateTime?
+  totpSecret       String? // AES-GCM encrypted
+  totpEnabledAt    DateTime?
+  backupCodes      String? // JSON array of scrypt/sha256 hashes
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lastLoginAt      DateTime?
+
+  sessions          Session[]
+  apiKeys           ApiKey[]
+  files             File[]
+  folders           Folder[]
+  uploads           Upload[]
+  shares            ShareLink[]
+  favorites         Favorite[]
+  trashItems        TrashItem[]
+  notifications     Notification[]
+  archives          ArchiveJob[]
+  authTokens        AuthToken[]
+  subscriptions     Subscription[]
+  memberships       OrganizationMember[]
+  savedSearches     SavedSearch[]
+  webhooks          Webhook[]
+  automations       Automation[]
+  fileRequests      FileRequest[]
+  tickets           SupportTicket[]
+  comments          Comment[]
+  folderMemberships FolderMember[]
+  importJobs        ImportJob[]
+  dataExports       DataExport[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([planKey])
+}
+
+model Session {
+  id          String   @id
+  userId      String
+  tokenHash   String   @unique
+  userAgent   String?
+  deviceLabel String?
+  ip          String?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  expiresAt   DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// One-time tokens: password reset, email verification, admin-issued recovery.
+model AuthToken {
+  id        String    @id
+  userId    String
+  purpose   String // password_reset | email_verify | recovery
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+/// Outbox for the email abstraction. A provider (SMTP, API, ...) drains it; with no provider it is a log.
+model EmailMessage {
+  id        String    @id
+  userId    String?
+  toEmail   String
+  template  String
+  subject   String
+  body      String
+  status    String    @default("queued") // queued | sent | skipped | failed
+  provider  String    @default("none")
+  error     String?
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+model ApiKey {
+  id         String    @id
+  userId     String
+  name       String
+  prefix     String
+  keyHash    String    @unique
+  scopes     String // comma separated
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApiUsage {
+  id        String   @id
+  userId    String
+  apiKeyId  String?
+  endpoint  String // normalized route pattern, never contains ids or secrets
+  method    String
+  status    Int
+  latencyMs Int
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Plans, billing, usage
+// ------------------------------------------------------------------------------------------------
+
+model Plan {
+  key               String   @id // free | pro | business | ...
+  name              String
+  description       String   @default("")
+  priceMonthlyCents Int      @default(0)
+  priceYearlyCents  Int      @default(0)
+  currency          String   @default("usd")
+  features          String   @default("{}") // JSON: boolean feature flags
+  limits            String   @default("{}") // JSON: numeric limits
+  isPublic          Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  providerPrices    String   @default("{}") // JSON: { stripe: { month: "price_...", year: "price_..." } }
+  updatedAt         DateTime @updatedAt
+}
+
+model Subscription {
+  id                     String    @id
+  userId                 String?
+  orgId                  String?
+  planKey                String
+  status                 String    @default("active") // active | trialing | past_due | canceled | incomplete
+  interval               String    @default("month") // month | year
+  currentPeriodStart     DateTime  @default(now())
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean   @default(false)
+  canceledAt             DateTime?
+  provider               String    @default("internal")
+  providerCustomerId     String?
+  providerSubscriptionId String?   @unique
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user   User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org    Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  events BillingEvent[]
+
+  @@index([userId, status])
+  @@index([orgId, status])
+}
+
+model BillingEvent {
+  id              String   @id
+  subscriptionId  String?
+  userId          String?
+  orgId           String?
+  type            String // subscription_created | plan_changed | canceled | renewed | payment_succeeded | payment_failed | ...
+  amountCents     Int?
+  currency        String?
+  provider        String   @default("internal")
+  providerEventId String?  @unique // idempotency for provider webhooks
+  data            String   @default("{}")
+  createdAt       DateTime @default(now())
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([orgId, createdAt])
+}
+
+/// Metered usage per account or organization per calendar month (transfer, API requests, ...).
+model UsageCounter {
+  id          String @id
+  subjectType String // user | org
+  subjectId   String
+  period      String // YYYY-MM
+  metric      String // downloadBytes | uploadBytes | apiRequests | webhookDeliveries | automationRuns
+  value       BigInt @default(0)
+
+  @@unique([subjectType, subjectId, period, metric])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Organizations
+// ------------------------------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  ownerId   String
+  planKey   String   @default("free")
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       OrganizationMember[]
+  invites       OrganizationInvite[]
+  files         File[]
+  folders       Folder[]
+  subscriptions Subscription[]
+  tags          Tag[]
+  fileRequests  FileRequest[]
+
+  @@index([ownerId])
+}
+
+model OrganizationMember {
+  id          String   @id
+  orgId       String
+  userId      String
+  role        String // owner | admin | member | viewer
+  invitedById String?
+  createdAt   DateTime @default(now())
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+model OrganizationInvite {
+  id          String    @id
+  orgId       String
+  email       String
+  role        String
+  tokenHash   String    @unique
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([email])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Files & folders
+// ------------------------------------------------------------------------------------------------
+
+model Folder {
+  id           String    @id
+  ownerId      String
+  orgId        String?
+  parentId     String?
+  name         String
+  nameKey      String    @default("")
+  description  String    @default("")
+  color        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  deletedAt    DateTime?
+  trashBatchId String?
+
+  owner     User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent    Folder?       @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]      @relation("FolderTree")
+  files     File[]
+  shares    ShareLink[]
+  favorites Favorite[]
+  members   FolderMember[]
+  comments  Comment[]
+  requests  FileRequest[]
+
+  @@index([ownerId, orgId, parentId, deletedAt])
+  @@index([orgId, parentId, deletedAt])
+  @@index([trashBatchId])
+}
+
+/// Internal sharing of a folder with another registered user.
+model FolderMember {
+  id         String   @id
+  folderId   String
+  userId     String
+  permission String // view | edit
+  addedById  String
+  createdAt  DateTime @default(now())
+
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, userId])
+  @@index([userId])
+}
+
+model File {
+  id             String    @id
+  ownerId        String
+  orgId          String?
+  folderId       String?
+  originalName   String
+  nameKey        String    @default("")
+  safeName       String
+  mime           String
+  extension      String
+  category       String    @default("other") // image | video | audio | document | archive | code | other
+  size           BigInt
+  storageKey     String    @unique
+  thumbnailKey   String?
+  sha256         String
+  version        Int       @default(1)
+  description    String    @default("")
+  notes          String    @default("")
+  colorLabel     String?
+  metadata       String    @default("{}") // JSON of user-defined key/value pairs
+  mediaInfo      String? // JSON: { width, height, duration, ... } extracted server-side
+  status         String    @default("processing") // processing | scanning | available | quarantined | failed
+  scanStatus     String    @default("pending") // pending | scanning | clean | infected | error | not_scanned
+  quarantineNote String?
+  requestId      String? // set when uploaded through a file request / portal
+  uploaderLabel  String? // name typed by an external uploader on a request page
+  downloadCount  Int       @default(0)
+  lastDownloadAt DateTime?
+  lastAccessedAt DateTime?
+  expiresAt      DateTime?
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  trashBatchId   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  folder      Folder?       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  shares      ShareLink[]
+  downloads   Download[]
+  favorites   Favorite[]
+  reports     AbuseReport[]
+  scans       VirusScan[]
+  versions    FileVersion[]
+  tags        FileTag[]
+  comments    Comment[]
+  activity    ActivityEvent[]
+  quarantine  QuarantineItem?
+
+  @@index([ownerId, orgId, deletedAt, folderId])
+  @@index([ownerId, orgId, deletedAt, createdAt])
+  @@index([ownerId, orgId, deletedAt, lastAccessedAt])
+  @@index([orgId, deletedAt, folderId])
+  @@index([expiresAt])
+  @@index([status])
+  @@index([sha256])
+  @@index([trashBatchId])
+  @@index([category])
+  @@index([requestId])
+}
+
+/// Previous versions of a file. The current version lives on File itself.
+model FileVersion {
+  id          String   @id
+  fileId      String
+  version     Int
+  storageKey  String   @unique
+  size        BigInt
+  sha256      String
+  mime        String
+  createdById String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, version])
+}
+
+model Tag {
+  id          String   @id
+  workspaceId String // user id (personal) or organization id
+  orgId       String?
+  name        String
+  nameKey     String
+  color       String   @default("#6b7691")
+  createdAt   DateTime @default(now())
+
+  org   Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  files FileTag[]
+
+  @@unique([workspaceId, nameKey])
+}
+
+model FileTag {
+  fileId String
+  tagId  String
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([fileId, tagId])
+  @@index([tagId])
+}
+
+model SavedSearch {
+  id        String   @id
+  userId    String
+  name      String
+  query     String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, pinned])
+}
+
+model Favorite {
+  id        String   @id
+  userId    String
+  fileId    String?
+  folderId  String?
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  file   File?   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fileId])
+  @@unique([userId, folderId])
+  @@index([userId, createdAt])
+}
+
+model TrashItem {
+  id        String   @id // equals the trashBatchId of the deleted subtree
+  ownerId   String
+  orgId     String?
+  kind      String // file | folder
+  itemId    String
+  name      String
+  size      BigInt   @default(0)
+  itemCount Int      @default(1)
+  deletedAt DateTime @default(now())
+  purgeAt   DateTime
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, orgId, deletedAt])
+  @@index([purgeAt])
+}
+
+model Comment {
+  id        String    @id
+  fileId    String?
+  folderId  String?
+  authorId  String
+  parentId  String?
+  body      String
+  mentions  String    @default("[]") // JSON array of user ids
+  editedAt  DateTime?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  file    File?     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  folder  Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("Replies")
+
+  @@index([fileId, createdAt])
+  @@index([folderId, createdAt])
+}
+
+/// Per-file / per-folder history that users can see (separate from the security audit log).
+model ActivityEvent {
+  id          String   @id
+  workspaceId String // user id or organization id
+  actorId     String?
+  actorLabel  String?
+  action      String // uploaded | downloaded | renamed | moved | shared | unshared | viewed | deleted | restored | version_created | version_restored | ...
+  fileId      String?
+  folderId    String?
+  targetName  String   @default("")
+  metadata    String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  file File? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([fileId, createdAt])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Uploads, transfers
+// ------------------------------------------------------------------------------------------------
+
+model Upload {
+  id                String   @id
+  ownerId           String
+  orgId             String?
+  folderId          String?
+  requestId         String? // uploaded through a file request / portal
+  uploadKeyHash     String? // external uploaders authenticate chunk calls with a per-upload secret
+  uploaderLabel     String?
+  replaceFileId     String? // when set, the result becomes a new version of this file
+  fileName          String
+  declaredMime      String?
+  size              BigInt
+  chunkSize         Int
+  totalChunks       Int
+  status            String   @default("active") // active | finalizing | complete | aborted | expired | failed
+  stagingPath       String
+  expectedSha256    String?
+  share             Boolean  @default(false)
+  expiresAt         DateTime?
+  sharePasswordHash String?
+  maxDownloads      Int?
+  fileId            String?
+  error             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  sessionExpiresAt  DateTime
+
+  owner  User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chunks UploadChunk[]
+
+  @@index([ownerId, status])
+  @@index([sessionExpiresAt])
+  @@index([requestId])
+}
+
+model UploadChunk {
+  id        String   @id
+  uploadId  String
+  index     Int
+  size      Int
+  sha256    String
+  createdAt DateTime @default(now())
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@unique([uploadId, index])
+}
+
+/// A controlled upload endpoint owned by an account: "send me your documents". Not a guest account.
+model FileRequest {
+  id                String    @id
+  ownerId           String
+  orgId             String?
+  kind              String    @default("request") // request | portal
+  name              String
+  description       String    @default("")
+  token             String    @unique
+  folderId          String?
+  expiresAt         DateTime?
+  closedAt          DateTime?
+  maxFileBytes      BigInt?
+  maxFiles          Int?
+  maxTotalBytes     BigInt?
+  allowedExtensions String    @default("[]") // JSON array, empty = any allowed type
+  passwordHash      String?
+  notifyOnUpload    Boolean   @default(true)
+  uploadCount       Int       @default(0)
+  totalBytes        BigInt    @default(0)
+  brandName         String?
+  accent            String?
+  welcomeMessage    String?
+  logoKey           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  owner  User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  org    Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  folder Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, closedAt])
+  @@index([orgId])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Sharing & downloads
+// ------------------------------------------------------------------------------------------------
+
+model ShareLink {
+  id             String    @id
+  token          String    @unique
+  fileId         String?
+  folderId       String?
+  ownerId        String
+  passwordHash   String?
+  permissions    String    @default("view,download") // comma separated: view, download
+  title          String?
+  message        String?
+  expiresAt      DateTime?
+  maxDownloads   Int?
+  maxViews       Int?
+  downloadCount  Int       @default(0)
+  viewCount      Int       @default(0)
+  ipAllowlist    String? // JSON array of exact IPs / CIDR blocks
+  showSha256     Boolean   @default(true)
+  embedEnabled   Boolean   @default(false)
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  file      File?        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  folder    Folder?      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  downloads Download[]
+  reports   AbuseReport[]
+  events    ShareEvent[]
+
+  @@index([fileId])
+  @@index([folderId])
+  @@index([ownerId, createdAt])
+}
+
+/// Privacy-preserving analytics: what happened and when, never who.
+model ShareEvent {
+  id        String   @id
+  shareId   String
+  type      String // view | download
+  bytes     BigInt?
+  referrer  String? // host only, and only when the visitor's browser sends one
+  createdAt DateTime @default(now())
+
+  share ShareLink @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  @@index([shareId, createdAt])
+}
+
+model Download {
+  id        String   @id
+  fileId    String
+  shareId   String?
+  bytes     BigInt?
+  createdAt DateTime @default(now())
+
+  file  File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  share ShareLink? @relation(fields: [shareId], references: [id], onDelete: SetNull)
+
+  @@index([fileId, createdAt])
+  @@index([createdAt])
+}
+
+model ArchiveJob {
+  id             String   @id
+  ownerId        String
+  name           String
+  items          String // JSON: { fileIds: string[], folderIds: string[] }
+  status         String   @default("queued") // queued | running | ready | failed | expired
+  totalFiles     Int      @default(0)
+  processedFiles Int      @default(0)
+  totalBytes     BigInt   @default(0)
+  processedBytes BigInt   @default(0)
+  storageKey     String?
+  size           BigInt?
+  error          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  expiresAt      DateTime
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([status, expiresAt])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Security: scanning, quarantine, abuse
+// ------------------------------------------------------------------------------------------------
+
+model VirusScan {
+  id         String    @id
+  fileId     String
+  provider   String
+  status     String // clean | infected | error | not_scanned
+  signature  String?
+  details    String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+}
+
+model QuarantineItem {
+  id           String    @id
+  fileId       String    @unique
+  reason       String
+  source       String // scan | admin | report
+  signature    String?
+  state        String    @default("pending") // pending | confirmed | released
+  reviewedById String?
+  reviewedAt   DateTime?
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([state, createdAt])
+}
+
+model AbuseReport {
+  id             String    @id
+  targetType     String    @default("file") // file | share | account | portal
+  targetId       String?
+  fileId         String?
+  fileName       String    @default("")
+  fileOwnerId    String?
+  shareId        String?
+  reporterUserId String?
+  category       String // malware | copyright | illegal | spam | abuse | other
+  description    String
+  contact        String?
+  reporterKey    String // hashed reporter fingerprint, used only to rate limit
+  status         String    @default("open") // open | reviewing | actioned | dismissed
+  resolutionNote String?
+  resolvedById   String?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  file  File?      @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  share ShareLink? @relation(fields: [shareId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([fileId])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Developer platform: webhooks, automations, events
+// ------------------------------------------------------------------------------------------------
+
+model Webhook {
+  id             String    @id
+  ownerId        String
+  orgId          String?
+  name           String
+  url            String
+  secretEnc      String // AES-GCM encrypted signing secret
+  events         String // JSON array of event types, "*" for all
+  enabled        Boolean   @default(true)
+  failureCount   Int       @default(0)
+  lastDeliveryAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner      User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([ownerId])
+}
+
+model WebhookDelivery {
+  id            String    @id
+  webhookId     String
+  eventId       String
+  event         String
+  payload       String
+  status        String    @default("pending") // pending | success | failed
+  responseCode  Int?
+  responseBody  String?
+  latencyMs     Int?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime?
+  error         String?
+  createdAt     DateTime  @default(now())
+  deliveredAt   DateTime?
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@index([status, nextAttemptAt])
+}
+
+model Automation {
+  id         String    @id
+  ownerId    String
+  orgId      String?
+  name       String
+  enabled    Boolean   @default(true)
+  trigger    String // JSON: { type, folderId?, ... }
+  conditions String    @default("[]") // JSON array
+  actions    String // JSON array
+  runCount   Int       @default(0)
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  owner User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  runs  AutomationRun[]
+
+  @@index([ownerId, enabled])
+}
+
+model AutomationRun {
+  id           String    @id
+  automationId String
+  status       String // success | failed | skipped
+  fileId       String?
+  detail       String?
+  error        String?
+  createdAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId, createdAt])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Notifications, audit, settings, jobs
+// ------------------------------------------------------------------------------------------------
+
+model Notification {
+  id        String    @id
+  userId    String
+  type      String
+  title     String
+  body      String
+  href      String?
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, dedupeKey])
+}
+
+model AuditLog {
+  id         String   @id
+  actorType  String // user | admin | api_key | system | external
+  actorId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  ip         String?
+  metadata   String? // JSON, never contains secrets
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String // JSON
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model FeatureFlag {
+  key         String   @id
+  enabled     Boolean  @default(true)
+  description String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
+model Job {
+  id          String    @id
+  type        String
+  payload     String    @default("{}")
+  status      String    @default("queued") // queued | running | done | failed
+  runAt       DateTime  @default(now())
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  progress    Int       @default(0)
+  result      String?
+  lastError   String?
+  userId      String?
+  lockedAt    DateTime?
+  startedAt   DateTime?
+  dedupeKey   String?   @unique
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([status, runAt])
+  @@index([type, status])
+}
+
+model StatSnapshot {
+  day          String   @id // YYYY-MM-DD (UTC)
+  users        Int
+  files        Int
+  storageBytes BigInt
+  downloads    Int
+  uploads      Int
+  createdAt    DateTime @default(now())
+}
+
+// ------------------------------------------------------------------------------------------------
+// Imports, exports, backups
+// ------------------------------------------------------------------------------------------------
+
+model ImportJob {
+  id         String    @id
+  userId     String
+  source     String // url
+  sourceRef  String
+  folderId   String?
+  status     String    @default("queued") // queued | running | done | failed
+  progress   Int       @default(0)
+  fileId     String?
+  error      String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model DataExport {
+  id         String   @id
+  userId     String
+  status     String   @default("queued") // queued | running | ready | failed | expired
+  storageKey String?
+  size       BigInt?
+  error      String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model BackupRecord {
+  id         String    @id
+  kind       String // database
+  status     String // running | ok | failed
+  path       String?
+  size       BigInt?
+  error      String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([kind, createdAt])
+}
+
+// ------------------------------------------------------------------------------------------------
+// Support, status, changelog
+// ------------------------------------------------------------------------------------------------
+
+model SupportTicket {
+  id        String   @id
+  userId    String
+  category  String // account | billing | bug | feature | abuse | other
+  subject   String
+  status    String   @default("open") // open | answered | closed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id        String   @id
+  ticketId  String
+  authorId  String?
+  isStaff   Boolean  @default(false)
+  body      String
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+model Changelog {
+  id          String    @id
+  title       String
+  body        String
+  kind        String // feature | improvement | fix | security
+  version     String?
+  publishedAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt])
+}
+
+model StatusCheck {
+  id        String   @id
+  service   String
+  ok        Boolean
+  latencyMs Int?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([service, createdAt])
+}
+
+model Incident {
+  id         String    @id
+  title      String
+  body       String
+  status     String    @default("investigating") // investigating | identified | monitoring | resolved
+  severity   String    @default("minor") // minor | major | critical
+  services   String    @default("[]")
+  createdById String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([createdAt])
+}
