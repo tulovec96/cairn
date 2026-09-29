@@ -50,5 +50,5 @@ export async function AppShell({ actor, children }: { actor: Actor; children: Re
 }
 
 export function PageContainer({ children, wide }: { children: ReactNode; wide?: boolean }) {
-  return <div className={wide ? "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6" : "mx-auto w-full max-w-5xl px-4 py-6 sm:px-6"}>{children}</div>;
+  return <div className={wide ? "mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8" : "mx-auto w-full max-w-5xl px-4 py-7 sm:px-6"}>{children}</div>;
 }

@@ -119,7 +119,7 @@ export function Avatar({ name, className, src }: { name: string; className?: str
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 pb-5">
+    <div className="animate-[ui-slide-up_360ms_ease-out] flex flex-wrap items-start justify-between gap-3 pb-6">
       <div className="min-w-0">
         <h1 className="text-xl font-semibold tracking-tight text-fg">{title}</h1>
         {description && <p className="mt-1 text-[13px] text-muted">{description}</p>}
@@ -130,7 +130,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-lg border border-line bg-surface", className)}>{children}</div>;
+  return <div className={cn("rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgb(16_32_42/0.03)] transition-[box-shadow,border-color,transform] duration-200 hover:border-line-strong hover:shadow-[0_12px_30px_rgb(16_32_42/0.07)]", className)}>{children}</div>;
 }
 
 export function CardHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {

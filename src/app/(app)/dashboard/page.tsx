@@ -1,7 +1,7 @@
 import { ACTIVITY_LABELS } from "@/lib/activity";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, FileText, Folder, HardDrive, Link2, Trash2, UploadCloud } from "lucide-react";
+import { ArrowUpRight, Download, FileText, Folder, HardDrive, Link2, Trash2, UploadCloud, WandSparkles } from "lucide-react";
 import { PageContainer } from "@/components/layout/AppShell";
 import { Badge, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/Feedback";
 import { ButtonLink } from "@/components/ui/Button";
@@ -88,6 +88,20 @@ export default async function DashboardPage() {
         <Stat icon={<Folder />} label="Folders" value={d.folderCount.toLocaleString("en-US")} href="/files" />
         <Stat icon={<Download />} label="Downloads" value={d.downloadCount.toLocaleString("en-US")} sub="across all your files" />
         <Stat icon={<Link2 />} label="Active links" value={d.activeShares.toLocaleString("en-US")} href="/shared" />
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+        <Card className="overflow-hidden border-accent-line bg-accent-soft/60">
+          <div className="flex items-center gap-4 p-5">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-fg shadow-lg shadow-accent/20"><WandSparkles aria-hidden /></div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Make your library work harder</p><p className="mt-1 text-[13px] text-muted">Clean up duplicates, organize imports, or create a share link in seconds.</p></div>
+            <ArrowUpRight className="hidden size-5 text-accent sm:block" aria-hidden />
+          </div>
+        </Card>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/duplicates" className="group rounded-xl border border-line bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-accent-line hover:shadow-[0_10px_24px_rgb(16_32_42/0.08)]"><p className="text-xs text-subtle">Library health</p><p className="mt-2 text-sm font-semibold">Find duplicates <ArrowUpRight className="ml-1 inline size-3.5 text-accent transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden /></p></Link>
+          <Link href="/automations" className="group rounded-xl border border-line bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-accent-line hover:shadow-[0_10px_24px_rgb(16_32_42/0.08)]"><p className="text-xs text-subtle">Save time</p><p className="mt-2 text-sm font-semibold">Automate tasks <ArrowUpRight className="ml-1 inline size-3.5 text-accent transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden /></p></Link>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
