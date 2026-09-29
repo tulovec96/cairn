@@ -117,7 +117,7 @@ export function Sidebar({ isAdmin, initialCollapsed, usage }: SidebarProps) {
         collapsed ? "w-[60px]" : "w-60",
       )}
     >
-      <div className={cn("flex h-14 shrink-0 items-center", collapsed ? "justify-center" : "justify-between px-4")}>
+      <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "justify-between px-4")}>
         <Link href="/dashboard" aria-label="Cairn home" className="inline-flex items-center gap-2 font-semibold tracking-tight text-white">
           <LogoMark className="size-7 text-accent" />
           {!collapsed && <span>Cairn</span>}
@@ -162,7 +162,7 @@ export function MobileNav({ isAdmin, usage, open, onOpenChange }: { isAdmin: boo
   return (
     <Drawer open={open} onOpenChange={onOpenChange} title="Navigation" side="left" width="w-72 max-w-[85vw] bg-sidebar" hideHeader>
       <div className="flex h-full flex-col bg-sidebar text-sidebar-fg">
-        <div className="flex h-14 shrink-0 items-center px-4">
+        <div className="flex h-16 shrink-0 items-center px-4">
           <span className="inline-flex items-center gap-2 font-semibold tracking-tight text-white">
             <LogoMark className="size-7 text-accent" /> Cairn
           </span>

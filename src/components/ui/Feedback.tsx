@@ -130,7 +130,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgb(16_32_42/0.03)] transition-[box-shadow,border-color,transform] duration-200 hover:border-line-strong hover:shadow-[0_12px_30px_rgb(16_32_42/0.07)]", className)}>{children}</div>;
+  return <div className={cn("rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgb(16_32_42/0.03)]", className)}>{children}</div>;
 }
 
 export function CardHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
